@@ -1,0 +1,59 @@
+version: '3'
+services:
+
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_PASSWORD: user
+      POSTGRES_USER: user
+      POSTGRES_CHARSET: "UTF8"
+    volumes:
+      - ./var/lib/postgresql/data:/var/lib/postgresql/data:cached
+    networks:
+      - default
+
+  php:
+    build:
+      context: .docker/php
+    volumes:
+      - data:/var/www/html:cached
+    environment:
+      - APP_DEV_PERMITTED=true
+      - PHP_DATE_TIMEZONE=UTC
+    networks:
+      - default
+    working_dir: /var/www/html
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - .docker/nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf
+      - .docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - data:/var/www/html:cached
+    networks:
+      - default
+    ports:
+      - 8080:80
+
+  webpack:
+    build: .docker/webpack
+    restart: always
+    volumes:
+      - data:/var/www/html:cached
+    command: ["sleep","infinity"]
+
+  redis:
+    image: redis
+    restart: always
+
+volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/application
+      o: bind
